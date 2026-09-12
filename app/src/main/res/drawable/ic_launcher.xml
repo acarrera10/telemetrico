@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#F7F4F1"
+        android:pathData="M0,0H108V108H0Z" />
+
+    <!-- Carbon Black TM monogram -->
+    <path
+        android:fillColor="#15151E"
+        android:pathData="M16,35 L58,35 L55,45 L42,45 L36,78 L25,78 L31,45 L13,45 Z" />
+    <path
+        android:fillColor="#15151E"
+        android:pathData="M54,45 L66,45 L73,61 L87,45 L98,45 L91,78 L80,78 L84,59 L73,72 L67,72 L61,59 L57,78 L46,78 Z" />
+
+    <!-- Warm Red speed accent -->
+    <path
+        android:fillColor="#FF1E00"
+        android:pathData="M14,27 L72,27 L68,33 L30,33 L27,38 L12,38 Z" />
+    <path
+        android:fillColor="#FF1E00"
+        android:pathData="M74,27 L96,27 L92,34 L70,34 Z" />
+</vector>
