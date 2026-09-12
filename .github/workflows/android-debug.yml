@@ -2,6 +2,8 @@ name: Build Telemétrico v0.3 APK
 
 on:
   workflow_dispatch:
+  push:
+    branches: [ main ]
 
 jobs:
   build:
