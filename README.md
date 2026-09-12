@@ -41,4 +41,23 @@ APK resultante:
 
 `app/build/outputs/apk/debug/app-debug.apk`
 
-El repo también incluye `.github/workflows/android-debug.yml` para generar el APK mediante GitHub Actions.
+El repo incluye `.github/workflows/android-debug.yml` para validar que el APK compile correctamente mediante GitHub Actions.
+
+## Publicación del APK en GitHub Releases
+
+El circuito de distribución está automatizado en `.github/workflows/publish-apk.yml`.
+
+1. La versión de la app se define en `app/build.gradle.kts` mediante `versionCode` y `versionName`.
+2. Cada push a `main` verifica si ya existe una Release para ese `versionName`.
+3. Si la versión todavía no fue publicada, GitHub Actions compila el APK.
+4. Se crea automáticamente una GitHub Release con tag `v<versionName>`.
+5. La Release contiene dos archivos equivalentes:
+   - `Telemetrico-<versionName>.apk`, para conservar cada versión identificada.
+   - `Telemetrico.apk`, con nombre estable para facilitar la descarga desde la tablet.
+6. Si esa versión ya existe, el workflow no vuelve a publicarla.
+
+Cuando el repositorio sea público, la URL estable para descargar siempre la última versión será:
+
+`https://github.com/acarrera10/telemetrico/releases/latest/download/Telemetrico.apk`
+
+Para publicar una nueva versión basta con incrementar `versionCode`, cambiar `versionName` y hacer push a `main`; el resto del proceso queda automatizado.
