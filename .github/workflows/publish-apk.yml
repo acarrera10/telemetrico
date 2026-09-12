@@ -1,0 +1,89 @@
+name: Publish Telemétrico APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Read app version
+        id: version
+        shell: bash
+        run: |
+          VERSION_NAME=$(sed -n 's/^[[:space:]]*versionName[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' app/build.gradle.kts | head -n 1)
+          if [ -z "$VERSION_NAME" ]; then
+            echo "Could not read versionName from app/build.gradle.kts"
+            exit 1
+          fi
+          echo "name=$VERSION_NAME" >> "$GITHUB_OUTPUT"
+          echo "tag=v$VERSION_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Check whether this version is already published
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+        shell: bash
+        run: |
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Release $TAG already exists; nothing to publish."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build installable debug APK
+        if: steps.release.outputs.exists != 'true'
+        run: gradle :app:assembleDebug --stacktrace
+
+      - name: Prepare stable APK filename
+        if: steps.release.outputs.exists != 'true'
+        shell: bash
+        run: |
+          cp app/build/outputs/apk/debug/app-debug.apk Telemetrico.apk
+          cp app/build/outputs/apk/debug/app-debug.apk "Telemetrico-${{ steps.version.outputs.name }}.apk"
+
+      - name: Publish GitHub Release
+        if: steps.release.outputs.exists != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ steps.version.outputs.tag }}
+          VERSION: ${{ steps.version.outputs.name }}
+        shell: bash
+        run: |
+          gh release create "$TAG" \
+            Telemetrico.apk \
+            "Telemetrico-${VERSION}.apk" \
+            --target "$GITHUB_SHA" \
+            --title "Telemétrico ${VERSION}" \
+            --generate-notes \
+            --latest
+
+      - name: Upload build artifact
+        if: steps.release.outputs.exists != 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: telemetrico-${{ steps.version.outputs.name }}
+          path: Telemetrico.apk
+          if-no-files-found: error
