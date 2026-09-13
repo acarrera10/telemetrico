@@ -159,7 +159,9 @@ private fun WaitingSoundtrack() {
         }.getOrNull()
 
         onDispose {
-            runCatching { player?.stop() }
+            runCatching {
+                if (player?.isPlaying == true) player.stop()
+            }
             player?.release()
         }
     }
