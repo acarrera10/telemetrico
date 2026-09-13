@@ -5,7 +5,6 @@ import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
@@ -14,7 +13,7 @@ import com.telemetrico.app.model.TelemetryState
 import com.telemetrico.app.network.UdpTelemetryReceiver
 import com.telemetrico.app.theme.TelemetricoTheme
 import com.telemetrico.app.ui.ConfigurationScreen
-import com.telemetrico.app.ui.TelemetryTestScreen
+import com.telemetrico.app.ui.DashboardScreen
 import com.telemetrico.app.ui.WaitingScreen
 
 class MainActivity : ComponentActivity() {
@@ -42,7 +41,7 @@ class MainActivity : ComponentActivity() {
                         connection = connection,
                         onBack = { configurationOpen = false },
                     )
-                    connection.telemetryActive -> TelemetryTestScreen(
+                    connection.telemetryActive -> DashboardScreen(
                         telemetry = telemetry,
                         connection = connection,
                     )
