@@ -53,16 +53,43 @@ jobs:
             echo "exists=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Build installable debug APK
+      - name: Verify signing secrets
         if: steps.release.outputs.exists != 'true'
-        run: gradle :app:assembleDebug --stacktrace
+        env:
+          KEYSTORE_B64: ${{ secrets.TELEMETRICO_KEYSTORE_B64 }}
+          STORE_PASSWORD: ${{ secrets.TELEMETRICO_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.TELEMETRICO_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.TELEMETRICO_KEY_PASSWORD }}
+        shell: bash
+        run: |
+          if [ -z "$KEYSTORE_B64" ] || [ -z "$STORE_PASSWORD" ] || [ -z "$KEY_ALIAS" ] || [ -z "$KEY_PASSWORD" ]; then
+            echo "Stable APK signing secrets are not configured."
+            exit 1
+          fi
+
+      - name: Restore release keystore
+        if: steps.release.outputs.exists != 'true'
+        env:
+          KEYSTORE_B64: ${{ secrets.TELEMETRICO_KEYSTORE_B64 }}
+        shell: bash
+        run: |
+          echo "$KEYSTORE_B64" | base64 --decode > "$RUNNER_TEMP/telemetrico-release.keystore"
+
+      - name: Build signed release APK
+        if: steps.release.outputs.exists != 'true'
+        env:
+          TELEMETRICO_KEYSTORE_PATH: ${{ runner.temp }}/telemetrico-release.keystore
+          TELEMETRICO_KEYSTORE_PASSWORD: ${{ secrets.TELEMETRICO_KEYSTORE_PASSWORD }}
+          TELEMETRICO_KEY_ALIAS: ${{ secrets.TELEMETRICO_KEY_ALIAS }}
+          TELEMETRICO_KEY_PASSWORD: ${{ secrets.TELEMETRICO_KEY_PASSWORD }}
+        run: gradle :app:assembleRelease --stacktrace
 
       - name: Prepare stable APK filename
         if: steps.release.outputs.exists != 'true'
         shell: bash
         run: |
-          cp app/build/outputs/apk/debug/app-debug.apk Telemetrico.apk
-          cp app/build/outputs/apk/debug/app-debug.apk "Telemetrico-${{ steps.version.outputs.name }}.apk"
+          cp app/build/outputs/apk/release/app-release.apk Telemetrico.apk
+          cp app/build/outputs/apk/release/app-release.apk "Telemetrico-${{ steps.version.outputs.name }}.apk"
 
       - name: Publish GitHub Release
         if: steps.release.outputs.exists != 'true'

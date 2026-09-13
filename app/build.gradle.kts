@@ -4,6 +4,8 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val signingStorePath = System.getenv("TELEMETRICO_KEYSTORE_PATH")
+
 android {
     namespace = "com.telemetrico.app"
     compileSdk = 35
@@ -12,13 +14,25 @@ android {
         applicationId = "com.telemetrico.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 5
-        versionName = "0.4.1-test"
+        versionCode = 6
+        versionName = "0.4.2-test"
+    }
+
+    signingConfigs {
+        if (!signingStorePath.isNullOrBlank()) {
+            create("release") {
+                storeFile = file(signingStorePath)
+                storePassword = System.getenv("TELEMETRICO_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("TELEMETRICO_KEY_ALIAS")
+                keyPassword = System.getenv("TELEMETRICO_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            signingConfig = signingConfigs.findByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

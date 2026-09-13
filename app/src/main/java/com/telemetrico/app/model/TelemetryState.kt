@@ -38,6 +38,7 @@ data class TelemetryState(
     val pitLimiterActive: Boolean = false,
     val fuelInTank: Float = 0f,
     val fuelCapacity: Float = 0f,
+    /** F1 MFD fuel delta expressed in laps; positive means surplus to race finish. */
     val fuelRemainingLaps: Float = 0f,
     val maxRpm: Int = 0,
     val drsAllowed: Boolean = false,
@@ -65,6 +66,9 @@ data class TelemetryState(
     val sessionType: Int = 0,
     val trackId: Int = -1,
     val trackName: String = "TRACK",
+    val weather: Int = 0,
+    val trackTemperatureC: Int = 0,
+    val airTemperatureC: Int = 0,
     val safetyCarStatus: Int = 0,
 
     // Internal routing metadata (not displayed)
@@ -74,6 +78,14 @@ data class TelemetryState(
 ) {
     val fuelPercent: Int
         get() = if (fuelCapacity > 0f) ((fuelInTank / fuelCapacity) * 100f).coerceIn(0f, 100f).roundToInt() else 0
+
+    /** Estimated usable fuel laps: laps still to complete plus/minus the game's MFD fuel delta. */
+    val estimatedFuelLapsAvailable: Float
+        get() {
+            if (totalLaps <= 0 || currentLap <= 0) return fuelRemainingLaps.coerceAtLeast(0f)
+            val raceLapsRemaining = (totalLaps - currentLap).coerceAtLeast(0)
+            return (raceLapsRemaining + fuelRemainingLaps).coerceAtLeast(0f)
+        }
 
     /** F1 hybrid energy store usable capacity is represented as ~4 MJ in the game telemetry. */
     val ersPercent: Int
@@ -100,6 +112,27 @@ data class TelemetryState(
             2 -> "HOTLAP"
             3 -> "OVERTAKE"
             else -> "NONE"
+        }
+
+    val weatherLabel: String
+        get() = when (weather) {
+            0 -> "CLEAR"
+            1 -> "LIGHT CLOUD"
+            2 -> "OVERCAST"
+            3 -> "LIGHT RAIN"
+            4 -> "HEAVY RAIN"
+            5 -> "STORM"
+            else -> "WEATHER"
+        }
+
+    val weatherSymbol: String
+        get() = when (weather) {
+            0 -> "☀"
+            1 -> "◐"
+            2 -> "☁"
+            3, 4 -> "☂"
+            5 -> "⚡"
+            else -> "•"
         }
 
     val fiaFlagLabel: String?
