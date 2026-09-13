@@ -26,11 +26,11 @@ fun TelemetricoWordmark(modifier: Modifier = Modifier, compact: Boolean = false)
     Row(modifier = modifier, verticalAlignment = Alignment.CenterVertically) {
         Box(
             Modifier
-                .width(if (compact) 7.dp else 9.dp)
-                .height(if (compact) 30.dp else 40.dp)
+                .width(if (compact) 6.dp else 9.dp)
+                .height(if (compact) 26.dp else 40.dp)
                 .background(F1WarmRed)
         )
-        Spacer(Modifier.width(12.dp))
+        Spacer(Modifier.width(if (compact) 9.dp else 12.dp))
         Column {
             Text(
                 text = "TELEMÉTRICO",
@@ -38,7 +38,7 @@ fun TelemetricoWordmark(modifier: Modifier = Modifier, compact: Boolean = false)
                 fontWeight = FontWeight.Black,
                 fontStyle = FontStyle.Italic,
                 letterSpacing = (-0.7).sp,
-                fontSize = if (compact) 22.sp else 30.sp,
+                fontSize = if (compact) 18.sp else 30.sp,
             )
             if (!compact) {
                 Text(
@@ -56,16 +56,17 @@ fun TelemetricoWordmark(modifier: Modifier = Modifier, compact: Boolean = false)
 fun TechnicalPanel(
     modifier: Modifier = Modifier,
     accent: Color = F1Carbon70,
+    contentPadding: Dp = 18.dp,
     content: @Composable ColumnScope.() -> Unit,
 ) {
     Column(
         modifier = modifier
             .border(1.dp, F1Carbon70.copy(alpha = 0.55f), RoundedCornerShape(18.dp))
             .background(Color(0xFF0E0F15).copy(alpha = 0.94f), RoundedCornerShape(18.dp))
-            .padding(18.dp)
+            .padding(contentPadding)
     ) {
         Box(Modifier.width(54.dp).height(4.dp).background(accent))
-        Spacer(Modifier.height(12.dp))
+        Spacer(Modifier.height(if (contentPadding <= 12.dp) 8.dp else 12.dp))
         content()
     }
 }
@@ -84,11 +85,18 @@ fun StatusRow(icon: String, label: String, value: String, valueColor: Color = F1
     }
 }
 
+/**
+ * Uses the exact F1 25 LED bitfield when it is available. On some PS5 sessions the
+ * percentage is populated while the bitfield remains zero; in that case we derive the
+ * number of illuminated LEDs from revLightsPercent so the visual remains useful.
+ */
 @Composable
-fun RevLights(bits: Int, modifier: Modifier = Modifier) {
-    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+fun RevLights(bits: Int, percent: Int = 0, modifier: Modifier = Modifier, compact: Boolean = false) {
+    val fallbackCount = ((percent.coerceIn(0, 100) / 100f) * 15f).roundToInt().coerceIn(0, 15)
+    val effectiveBits = if (bits != 0 || percent == 0) bits else if (fallbackCount == 0) 0 else (1 shl fallbackCount) - 1
+    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(if (compact) 4.dp else 7.dp)) {
         for (i in 0 until 15) {
-            val active = bits and (1 shl i) != 0
+            val active = effectiveBits and (1 shl i) != 0
             val activeColor = when {
                 i < 5 -> Color(0xFF22E15D)
                 i < 10 -> WarningYellow
@@ -96,7 +104,7 @@ fun RevLights(bits: Int, modifier: Modifier = Modifier) {
             }
             Box(
                 Modifier
-                    .size(14.dp)
+                    .size(if (compact) 10.dp else 14.dp)
                     .background(if (active) activeColor else F1Carbon90, RoundedCornerShape(50))
                     .border(1.dp, if (active) activeColor else F1Carbon70, RoundedCornerShape(50))
             )
@@ -112,11 +120,11 @@ fun VerticalPedalBar(
     modifier: Modifier = Modifier,
 ) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, color = F1Carbon50, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-        Spacer(Modifier.height(7.dp))
+        Text(label, color = F1Carbon50, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(6.dp))
         Box(
             Modifier
-                .width(28.dp)
+                .width(24.dp)
                 .weight(1f)
                 .border(1.dp, F1Carbon70, RoundedCornerShape(5.dp))
                 .padding(3.dp),
@@ -129,8 +137,8 @@ fun VerticalPedalBar(
                     .background(color, RoundedCornerShape(3.dp))
             )
         }
-        Spacer(Modifier.height(6.dp))
-        Text("${(value * 100).roundToInt()}%", color = F1HighVisWhite, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Spacer(Modifier.height(5.dp))
+        Text("${(value * 100).roundToInt()}%", color = F1HighVisWhite, fontSize = 13.sp, fontWeight = FontWeight.Bold)
     }
 }
 
@@ -162,10 +170,46 @@ fun ThinTrackLine(modifier: Modifier = Modifier, color: Color = F1WarmRed, thick
 }
 
 @Composable
-fun BigMetric(label: String, value: String, unit: String? = null, modifier: Modifier = Modifier) {
+fun BigMetric(label: String, value: String, unit: String? = null, modifier: Modifier = Modifier, compact: Boolean = false) {
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(label, color = F1Carbon50, fontSize = 12.sp, letterSpacing = 1.sp)
-        Text(value, color = F1HighVisWhite, fontSize = 62.sp, lineHeight = 62.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
-        if (unit != null) Text(unit, color = F1OffWhite, fontSize = 14.sp, letterSpacing = 1.sp)
+        Text(label, color = F1Carbon50, fontSize = if (compact) 10.sp else 12.sp, letterSpacing = 1.sp)
+        Text(
+            value,
+            color = F1HighVisWhite,
+            fontSize = if (compact) 46.sp else 62.sp,
+            lineHeight = if (compact) 46.sp else 62.sp,
+            fontWeight = FontWeight.Black,
+            textAlign = TextAlign.Center,
+        )
+        if (unit != null) Text(unit, color = F1OffWhite, fontSize = if (compact) 11.sp else 14.sp, letterSpacing = 1.sp)
+    }
+}
+
+@Composable
+fun HorizontalValueBar(label: String, value: Int, color: Color, modifier: Modifier = Modifier, suffix: String = "%") {
+    Column(modifier) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(label, color = F1Carbon50, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.weight(1f))
+            Text("$value$suffix", color = F1HighVisWhite, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+        }
+        Spacer(Modifier.height(5.dp))
+        Box(Modifier.fillMaxWidth().height(7.dp).background(F1Carbon90, RoundedCornerShape(50))) {
+            Box(
+                Modifier
+                    .fillMaxHeight()
+                    .fillMaxWidth((value.coerceIn(0, 100) / 100f))
+                    .background(color, RoundedCornerShape(50))
+            )
+        }
+    }
+}
+
+@Composable
+fun SmallMetric(label: String, value: String, modifier: Modifier = Modifier, valueColor: Color = F1HighVisWhite) {
+    Column(modifier) {
+        Text(label, color = F1Carbon50, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.7.sp)
+        Spacer(Modifier.height(2.dp))
+        Text(value, color = valueColor, fontSize = 16.sp, fontWeight = FontWeight.Bold)
     }
 }

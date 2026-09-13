@@ -17,8 +17,9 @@ class UdpTelemetryReceiver(
     private val onTelemetry: (TelemetryState) -> Unit,
 ) {
     private val running = AtomicBoolean(false)
-    private val lastValidPacketAt = AtomicLong(0L)
-    private val latestTelemetry = AtomicReference<TelemetryState?>(null)
+    /** Last Car Telemetry packet (packet id 6), used to decide whether the car is actually live. */
+    private val lastLiveTelemetryAt = AtomicLong(0L)
+    private val latestTelemetry = AtomicReference(TelemetryState())
     private val telemetryActive = AtomicBoolean(false)
     private var socket: DatagramSocket? = null
     private var receiveThread: Thread? = null
@@ -58,13 +59,14 @@ class UdpTelemetryReceiver(
             onConnection(ConnectionState(ConnectionPhase.LISTENING, tabletIp = ip, port = port))
 
             val buffer = ByteArray(2048)
-            val packet = DatagramPacket(buffer, buffer.size)
+            val datagram = DatagramPacket(buffer, buffer.size)
             var lastUiPublishNanos = 0L
+            var currentState = TelemetryState()
 
             while (running.get()) {
-                packet.length = buffer.size
-                datagramSocket.receive(packet)
-                val result = F125Parser.parse(packet.data, packet.length) ?: continue
+                datagram.length = buffer.size
+                datagramSocket.receive(datagram)
+                val result = F125Parser.parse(datagram.data, datagram.length, currentState) ?: continue
 
                 if (result.header.packetFormat != F125Parser.PACKET_FORMAT) {
                     onConnection(
@@ -79,11 +81,16 @@ class UdpTelemetryReceiver(
                     continue
                 }
 
-                val nowMillis = System.currentTimeMillis()
+                if (result.stateChanged) {
+                    currentState = result.telemetry
+                    latestTelemetry.set(currentState)
+                }
 
-                result.telemetry?.let { telemetry ->
-                    lastValidPacketAt.set(nowMillis)
-                    latestTelemetry.set(telemetry)
+                // Keep collecting all packet types, but only a live Car Telemetry packet means
+                // the player is actually on track. This preserves the v0.3 auto-transition behavior.
+                if (result.header.packetId == 6) {
+                    val nowMillis = System.currentTimeMillis()
+                    lastLiveTelemetryAt.set(nowMillis)
                     if (telemetryActive.compareAndSet(false, true)) {
                         onConnection(
                             ConnectionState(
@@ -95,9 +102,12 @@ class UdpTelemetryReceiver(
                             )
                         )
                     }
+                }
+
+                if (telemetryActive.get()) {
                     val nowNanos = System.nanoTime()
                     if (nowNanos - lastUiPublishNanos >= 33_000_000L) {
-                        latestTelemetry.get()?.let(onTelemetry)
+                        onTelemetry(latestTelemetry.get())
                         lastUiPublishNanos = nowNanos
                     }
                 }
@@ -115,16 +125,16 @@ class UdpTelemetryReceiver(
         while (running.get()) {
             try {
                 Thread.sleep(500)
-                val last = lastValidPacketAt.get()
+                val last = lastLiveTelemetryAt.get()
                 if (last > 0 && System.currentTimeMillis() - last > 2500L) {
-                    lastValidPacketAt.set(0L)
+                    lastLiveTelemetryAt.set(0L)
                     telemetryActive.set(false)
                     onConnection(
                         ConnectionState(
                             phase = ConnectionPhase.LISTENING,
                             tabletIp = ip,
                             port = port,
-                            message = "Esperando paquetes UDP de F1 25",
+                            message = "Esperando paquetes de telemetría de carrera de F1 25",
                         )
                     )
                 }

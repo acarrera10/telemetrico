@@ -1,16 +1,19 @@
 package com.telemetrico.app.ui
 
+import android.media.MediaPlayer
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -25,6 +28,8 @@ fun WaitingScreen(
     connection: ConnectionState,
     onOpenSettings: () -> Unit,
 ) {
+    WaitingSoundtrack()
+
     Row(
         Modifier
             .fillMaxSize()
@@ -33,12 +38,12 @@ fun WaitingScreen(
     ) {
         Column(Modifier.weight(0.88f).fillMaxHeight()) {
             TelemetricoWordmark()
-            Spacer(Modifier.weight(0.45f))
+            Spacer(Modifier.weight(0.36f))
             Image(
                 painter = painterResource(R.drawable.f1_logo_personal),
                 contentDescription = "F1",
                 contentScale = ContentScale.Fit,
-                modifier = Modifier.width(250.dp).height(86.dp),
+                modifier = Modifier.width(285.dp).height(96.dp),
             )
             Spacer(Modifier.height(12.dp))
             Text(
@@ -61,7 +66,7 @@ fun WaitingScreen(
             Box(Modifier.width(100.dp).height(4.dp).background(F1WarmRed))
             Spacer(Modifier.height(14.dp))
             Text(
-                "Iniciá una sesión en PS5 y la app se conectará automáticamente cuando empiecen a llegar datos.",
+                "Iniciá una sesión en PS5 y la app pasará automáticamente al dashboard cuando empiecen a llegar datos.",
                 color = F1Carbon50,
                 fontSize = 15.sp,
                 lineHeight = 21.sp,
@@ -113,12 +118,12 @@ fun WaitingScreen(
                 }
                 Spacer(Modifier.height(10.dp))
                 StatusRow("◉", "Wi‑Fi", if (connection.tabletIp != null) "Conectado" else "Sin IP", if (connection.tabletIp != null) TelemetryGreen else WarningYellow)
-                StatusRow("▣", "PS5", if (connection.telemetryActive) "Enviando" else "Pendiente", if (connection.telemetryActive) TelemetryGreen else WarningYellow)
                 StatusRow("⌁", "UDP", when (connection.phase) {
                     ConnectionPhase.RECEIVING -> "Recibiendo"
                     ConnectionPhase.ERROR -> "Error"
                     else -> "Escuchando"
                 }, if (connection.phase == ConnectionPhase.ERROR) F1WarmRed else F1OffWhite)
+                StatusRow("●", "Telemetría", if (connection.telemetryActive) "Activa" else "Esperando", if (connection.telemetryActive) TelemetryGreen else WarningYellow)
                 StatusRow("#", "Formato", connection.packetFormat?.toString() ?: "F1 25 / 2025")
                 StatusRow("□", "Puerto", connection.port.toString())
                 StatusRow("▤", "IP de esta tablet", connection.tabletIp ?: "No detectada")
@@ -137,6 +142,27 @@ fun WaitingScreen(
                     Step("3", "IP + puerto 20777")
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun WaitingSoundtrack() {
+    val context = LocalContext.current
+    DisposableEffect(context) {
+        val player = runCatching {
+            MediaPlayer.create(context, R.raw.waiting_soundtrack)?.apply {
+                isLooping = true
+                setVolume(0.38f, 0.38f)
+                start()
+            }
+        }.getOrNull()
+
+        onDispose {
+            runCatching {
+                if (player?.isPlaying == true) player.stop()
+            }
+            player?.release()
         }
     }
 }
