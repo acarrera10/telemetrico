@@ -42,18 +42,10 @@ object F125Parser {
         val headerBuffer = ByteBuffer.wrap(packet, 0, length).order(ByteOrder.LITTLE_ENDIAN)
         val header = parseHeader(headerBuffer)
 
-        if (header.packetFormat != PACKET_FORMAT) {
-            return ParseResult(header, current, false)
-        }
+        if (header.packetFormat != PACKET_FORMAT) return ParseResult(header, current, false)
+        if (header.playerCarIndex !in 0 until MAX_CARS) return ParseResult(header, current, false)
 
-        if (header.playerCarIndex !in 0 until MAX_CARS) {
-            return ParseResult(header, current, false)
-        }
-
-        val base = if (current.sessionUid != 0uL && current.sessionUid != header.sessionUid) {
-            TelemetryState()
-        } else current
-
+        val base = if (current.sessionUid != 0uL && current.sessionUid != header.sessionUid) TelemetryState() else current
         val common = base.copy(
             playerCarIndex = header.playerCarIndex,
             frameIdentifier = header.frameIdentifier,
@@ -71,17 +63,16 @@ object F125Parser {
             PACKET_ID_TYRE_SETS -> parseTyreSets(packet, length, header.playerCarIndex, common)
             else -> common
         }
-
         return ParseResult(header, updated, updated != current)
     }
 
     private fun parseSession(packet: ByteArray, length: Int, current: TelemetryState): TelemetryState {
         if (length < 154) return current
         val b = buffer(packet, length)
-        b.position(29)
-        b.u8()
-        b.s8()
-        b.s8()
+        b.position(HEADER_SIZE)
+        val weather = b.u8()
+        val trackTemp = b.s8()
+        val airTemp = b.s8()
         val totalLaps = b.u8()
         b.u16()
         val sessionType = b.u8()
@@ -98,6 +89,9 @@ object F125Parser {
         b.position(b.position() + 21 * 5)
         val safetyCarStatus = b.u8()
         return current.copy(
+            weather = weather,
+            trackTemperatureC = trackTemp,
+            airTemperatureC = airTemp,
             totalLaps = totalLaps,
             sessionType = sessionType,
             trackId = trackId,
@@ -166,7 +160,6 @@ object F125Parser {
         if (length < 1352) return current
         val b = buffer(packet, length)
         b.position(HEADER_SIZE + playerIdx * CAR_TELEMETRY_DATA_SIZE)
-
         val speed = b.u16()
         val throttle = b.float.coerceIn(0f, 1f)
         b.float
@@ -180,7 +173,6 @@ object F125Parser {
         repeat(4) { b.u16() }
         repeat(4) { b.u8() }
         val innerTemps = List(4) { b.u8() }
-
         return current.copy(
             speedKph = speed,
             throttle = throttle,
@@ -198,32 +190,23 @@ object F125Parser {
         if (length < 1239) return current
         val b = buffer(packet, length)
         b.position(HEADER_SIZE + playerIdx * CAR_STATUS_DATA_SIZE)
-        b.u8()
-        b.u8()
-        b.u8()
-        b.u8()
+        b.u8(); b.u8(); b.u8(); b.u8()
         val pitLimiter = b.u8() == 1
         val fuel = b.float
         val capacity = b.float
         val fuelLaps = b.float
         val maxRpm = b.u16()
-        b.u16()
-        b.u8()
+        b.u16(); b.u8()
         val drsAllowed = b.u8() == 1
         val drsDistance = b.u16()
         val actualCompound = b.u8()
         val visualCompound = b.u8()
         val tyreAge = b.u8()
         val fiaFlag = b.s8()
-        b.float
-        b.float
+        b.float; b.float
         val ersEnergy = b.float
         val ersMode = b.u8()
-        b.float
-        b.float
-        b.float
-        b.u8()
-
+        b.float; b.float; b.float; b.u8()
         return current.copy(
             pitLimiterActive = pitLimiter,
             fuelInTank = fuel,
@@ -256,9 +239,7 @@ object F125Parser {
         val activeCars = b.u8()
         if (playerIdx >= activeCars) return current
         b.position(HEADER_SIZE + 1 + playerIdx * PARTICIPANT_DATA_SIZE)
-        b.u8()
-        b.u8()
-        b.u8()
+        b.u8(); b.u8(); b.u8()
         val teamId = b.u8()
         b.u8()
         val raceNumber = b.u8()
@@ -268,12 +249,7 @@ object F125Parser {
         val nullIndex = nameBytes.indexOf(0)
         val nameLength = if (nullIndex >= 0) nullIndex else nameBytes.size
         val name = String(nameBytes, 0, nameLength, StandardCharsets.UTF_8).trim().ifBlank { "DRIVER" }
-
-        return current.copy(
-            driverName = name,
-            teamName = teamName(teamId),
-            raceNumber = raceNumber,
-        )
+        return current.copy(driverName = name, teamName = teamName(teamId), raceNumber = raceNumber)
     }
 
     private fun parseSessionHistory(packet: ByteArray, length: Int, playerIdx: Int, current: TelemetryState): TelemetryState {
@@ -289,7 +265,6 @@ object F125Parser {
         val bestS2LapNum = b.u8()
         val bestS3LapNum = b.u8()
         val historyBase = b.position()
-
         fun record(lapNum: Int): LapHistoryRecord? {
             if (lapNum !in 1..numLaps.coerceAtMost(100)) return null
             val r = buffer(packet, length)
@@ -301,7 +276,6 @@ object F125Parser {
             r.u8()
             return LapHistoryRecord(lap, s1, s2, s3)
         }
-
         return current.copy(
             bestLapTimeMs = record(bestLapNum)?.lapMs ?: current.bestLapTimeMs,
             bestSector1Ms = record(bestS1LapNum)?.s1Ms ?: current.bestSector1Ms,
@@ -319,19 +293,11 @@ object F125Parser {
         val fittedIdxOffset = HEADER_SIZE + 1 + 20 * TYRE_SET_DATA_SIZE
         val fittedIdx = packet[fittedIdxOffset].toInt() and 0xFF
         if (fittedIdx !in 0 until 20) return current
-
         b.position(HEADER_SIZE + 1 + fittedIdx * TYRE_SET_DATA_SIZE)
-        b.u8()
-        b.u8()
-        b.u8()
-        b.u8()
-        b.u8()
+        b.u8(); b.u8(); b.u8(); b.u8(); b.u8()
         val lifeSpan = b.u8()
         val usableLife = b.u8()
-        return current.copy(
-            tyreLifeSpanLaps = lifeSpan,
-            tyreUsableLifeLaps = usableLife,
-        )
+        return current.copy(tyreLifeSpanLaps = lifeSpan, tyreUsableLifeLaps = usableLife)
     }
 
     private fun parseHeader(buffer: ByteBuffer): F1PacketHeader {
@@ -347,88 +313,31 @@ object F125Parser {
         val overallFrameIdentifier = buffer.u32()
         val playerCarIndex = buffer.u8()
         val secondaryPlayerCarIndex = buffer.u8()
-        return F1PacketHeader(
-            packetFormat = packetFormat,
-            gameYear = gameYear,
-            gameMajorVersion = major,
-            gameMinorVersion = minor,
-            packetVersion = packetVersion,
-            packetId = packetId,
-            sessionUid = sessionUid,
-            sessionTime = sessionTime,
-            frameIdentifier = frameIdentifier,
-            overallFrameIdentifier = overallFrameIdentifier,
-            playerCarIndex = playerCarIndex,
-            secondaryPlayerCarIndex = secondaryPlayerCarIndex,
-        )
+        return F1PacketHeader(packetFormat, gameYear, major, minor, packetVersion, packetId, sessionUid, sessionTime, frameIdentifier, overallFrameIdentifier, playerCarIndex, secondaryPlayerCarIndex)
     }
 
     private data class LapHistoryRecord(val lapMs: Long, val s1Ms: Long, val s2Ms: Long, val s3Ms: Long)
-
     private fun sectorTime(msPart: Int, minutesPart: Int): Long = minutesPart * 60_000L + msPart.toLong()
 
     private fun teamName(id: Int): String = when (id) {
-        0 -> "MERCEDES"
-        1 -> "FERRARI"
-        2 -> "RED BULL RACING"
-        3 -> "WILLIAMS"
-        4 -> "ASTON MARTIN"
-        5 -> "ALPINE"
-        6 -> "RB"
-        7 -> "HAAS"
-        8 -> "McLAREN"
-        9 -> "SAUBER"
-        41 -> "F1 GENERIC"
-        104 -> "CUSTOM TEAM"
-        129, 155 -> "KONNERSPORT"
-        142, 154 -> "APXGP"
-        185 -> "MERCEDES '24"
-        186 -> "FERRARI '24"
-        187 -> "RED BULL '24"
-        188 -> "WILLIAMS '24"
-        189 -> "ASTON MARTIN '24"
-        190 -> "ALPINE '24"
-        191 -> "RB '24"
-        192 -> "HAAS '24"
-        193 -> "McLAREN '24"
-        194 -> "SAUBER '24"
+        0 -> "MERCEDES"; 1 -> "FERRARI"; 2 -> "RED BULL RACING"; 3 -> "WILLIAMS"; 4 -> "ASTON MARTIN"
+        5 -> "ALPINE"; 6 -> "RB"; 7 -> "HAAS"; 8 -> "McLAREN"; 9 -> "SAUBER"; 41 -> "F1 GENERIC"
+        104 -> "CUSTOM TEAM"; 129, 155 -> "KONNERSPORT"; 142, 154 -> "APXGP"
+        185 -> "MERCEDES '24"; 186 -> "FERRARI '24"; 187 -> "RED BULL '24"; 188 -> "WILLIAMS '24"
+        189 -> "ASTON MARTIN '24"; 190 -> "ALPINE '24"; 191 -> "RB '24"; 192 -> "HAAS '24"; 193 -> "McLAREN '24"; 194 -> "SAUBER '24"
         else -> "TEAM $id"
     }
 
     private fun trackName(id: Int): String = when (id) {
-        0 -> "MELBOURNE"
-        2 -> "SHANGHAI"
-        3 -> "BAHRAIN"
-        4 -> "CATALUNYA"
-        5 -> "MONACO"
-        6 -> "MONTREAL"
-        7 -> "SILVERSTONE"
-        9 -> "HUNGARORING"
-        10 -> "SPA"
-        11 -> "MONZA"
-        12 -> "SINGAPORE"
-        13 -> "SUZUKA"
-        14 -> "ABU DHABI"
-        15 -> "TEXAS"
-        16 -> "BRAZIL"
-        17 -> "AUSTRIA"
-        19 -> "MEXICO"
-        20 -> "BAKU"
-        26 -> "ZANDVOORT"
-        27 -> "IMOLA"
-        29 -> "JEDDAH"
-        30 -> "MIAMI"
-        31 -> "LAS VEGAS"
-        32 -> "LOSAIL"
-        39 -> "SILVERSTONE REV."
-        40 -> "AUSTRIA REV."
-        41 -> "ZANDVOORT REV."
+        0 -> "MELBOURNE"; 2 -> "SHANGHAI"; 3 -> "BAHRAIN"; 4 -> "CATALUNYA"; 5 -> "MONACO"; 6 -> "MONTREAL"
+        7 -> "SILVERSTONE"; 9 -> "HUNGARORING"; 10 -> "SPA"; 11 -> "MONZA"; 12 -> "SINGAPORE"; 13 -> "SUZUKA"
+        14 -> "ABU DHABI"; 15 -> "TEXAS"; 16 -> "BRAZIL"; 17 -> "AUSTRIA"; 19 -> "MEXICO"; 20 -> "BAKU"
+        26 -> "ZANDVOORT"; 27 -> "IMOLA"; 29 -> "JEDDAH"; 30 -> "MIAMI"; 31 -> "LAS VEGAS"; 32 -> "LOSAIL"
+        39 -> "SILVERSTONE REV."; 40 -> "AUSTRIA REV."; 41 -> "ZANDVOORT REV."
         else -> if (id >= 0) "TRACK $id" else "TRACK"
     }
 
-    private fun buffer(packet: ByteArray, length: Int): ByteBuffer =
-        ByteBuffer.wrap(packet, 0, length).order(ByteOrder.LITTLE_ENDIAN)
-
+    private fun buffer(packet: ByteArray, length: Int): ByteBuffer = ByteBuffer.wrap(packet, 0, length).order(ByteOrder.LITTLE_ENDIAN)
     private fun ByteBuffer.u8(): Int = get().toInt() and 0xFF
     private fun ByteBuffer.s8(): Int = get().toInt()
     private fun ByteBuffer.u16(): Int = short.toInt() and 0xFFFF
