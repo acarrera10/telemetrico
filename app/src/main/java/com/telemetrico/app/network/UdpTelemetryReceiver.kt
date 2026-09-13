@@ -18,7 +18,7 @@ class UdpTelemetryReceiver(
 ) {
     private val running = AtomicBoolean(false)
     private val lastValidPacketAt = AtomicLong(0L)
-    private val latestTelemetry = AtomicReference<TelemetryState?>(null)
+    private val latestTelemetry = AtomicReference(TelemetryState())
     private val telemetryActive = AtomicBoolean(false)
     private var socket: DatagramSocket? = null
     private var receiveThread: Thread? = null
@@ -58,13 +58,14 @@ class UdpTelemetryReceiver(
             onConnection(ConnectionState(ConnectionPhase.LISTENING, tabletIp = ip, port = port))
 
             val buffer = ByteArray(2048)
-            val packet = DatagramPacket(buffer, buffer.size)
+            val datagram = DatagramPacket(buffer, buffer.size)
             var lastUiPublishNanos = 0L
+            var currentState = TelemetryState()
 
             while (running.get()) {
-                packet.length = buffer.size
-                datagramSocket.receive(packet)
-                val result = F125Parser.parse(packet.data, packet.length) ?: continue
+                datagram.length = buffer.size
+                datagramSocket.receive(datagram)
+                val result = F125Parser.parse(datagram.data, datagram.length, currentState) ?: continue
 
                 if (result.header.packetFormat != F125Parser.PACKET_FORMAT) {
                     onConnection(
@@ -80,26 +81,29 @@ class UdpTelemetryReceiver(
                 }
 
                 val nowMillis = System.currentTimeMillis()
+                lastValidPacketAt.set(nowMillis)
 
-                result.telemetry?.let { telemetry ->
-                    lastValidPacketAt.set(nowMillis)
-                    latestTelemetry.set(telemetry)
-                    if (telemetryActive.compareAndSet(false, true)) {
-                        onConnection(
-                            ConnectionState(
-                                phase = ConnectionPhase.RECEIVING,
-                                tabletIp = ip,
-                                port = port,
-                                lastPacketAtMillis = nowMillis,
-                                packetFormat = result.header.packetFormat,
-                            )
+                if (telemetryActive.compareAndSet(false, true)) {
+                    onConnection(
+                        ConnectionState(
+                            phase = ConnectionPhase.RECEIVING,
+                            tabletIp = ip,
+                            port = port,
+                            lastPacketAtMillis = nowMillis,
+                            packetFormat = result.header.packetFormat,
                         )
-                    }
-                    val nowNanos = System.nanoTime()
-                    if (nowNanos - lastUiPublishNanos >= 33_000_000L) {
-                        latestTelemetry.get()?.let(onTelemetry)
-                        lastUiPublishNanos = nowNanos
-                    }
+                    )
+                }
+
+                if (result.stateChanged) {
+                    currentState = result.telemetry
+                    latestTelemetry.set(currentState)
+                }
+
+                val nowNanos = System.nanoTime()
+                if (nowNanos - lastUiPublishNanos >= 33_000_000L) {
+                    onTelemetry(latestTelemetry.get())
+                    lastUiPublishNanos = nowNanos
                 }
             }
         } catch (_: SocketException) {
