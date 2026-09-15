@@ -1,6 +1,7 @@
 package com.telemetrico.app.ui
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
@@ -24,14 +25,17 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.telemetrico.app.R
 import com.telemetrico.app.model.ConnectionState
 import com.telemetrico.app.model.TelemetryState
 import java.util.Locale
@@ -53,8 +57,18 @@ private val Cyan = Color(0xFF00E3E8)
 private val Green = Color(0xFF00EB76)
 private val Yellow = Color(0xFFFFD21A)
 private val Red = Color(0xFFFF3039)
-private val DisplayFont = FontFamily.SansSerif
-private val UiFont = FontFamily.SansSerif
+
+private val DisplayFont = FontFamily(
+    Font(R.font.nimbus_sans_narrow_regular, FontWeight.Normal),
+    Font(R.font.nimbus_sans_narrow_bold, FontWeight.Bold),
+    Font(R.font.nimbus_sans_narrow_bold, FontWeight.Black),
+)
+
+private val UiFont = FontFamily(
+    Font(R.font.nimbus_sans_regular, FontWeight.Normal),
+    Font(R.font.nimbus_sans_bold, FontWeight.Bold),
+    Font(R.font.nimbus_sans_bold, FontWeight.Black),
+)
 
 @Composable
 fun DashboardScreen(telemetry: TelemetryState, connection: ConnectionState) {
@@ -72,12 +86,7 @@ fun DashboardScreen(telemetry: TelemetryState, connection: ConnectionState) {
                         scaleY = scale
                         transformOrigin = TransformOrigin(0f, 0f)
                     }
-                    .background(
-                        Brush.radialGradient(
-                            colors = listOf(Color(0x2B08212D), Color.Transparent),
-                            radius = 720f,
-                        )
-                    )
+                    .background(Brush.radialGradient(colors = listOf(Color(0x2B08212D), Color.Transparent), radius = 720f))
                     .background(CanvasBg)
             ) {
                 Header(telemetry)
@@ -95,62 +104,16 @@ fun DashboardScreen(telemetry: TelemetryState, connection: ConnectionState) {
 @Composable
 private fun BoxScope.Header(t: TelemetryState) {
     Panel(Modifier.offset(0.dp, 0.dp).size(1600.dp, 116.dp), radius = 17f) {
-        Box(
-            Modifier
-                .offset(0.dp, 0.dp)
-                .size(1050.dp, 116.dp)
-                .background(Brush.horizontalGradient(listOf(Color(0xFF071019), Color(0xFF050B11), Color(0xFF080F17))))
-        )
+        Box(Modifier.offset(0.dp, 0.dp).size(1050.dp, 116.dp).background(Brush.horizontalGradient(listOf(Color(0xFF071019), Color(0xFF050B11), Color(0xFF080F17)))))
         Box(Modifier.offset(0.dp, 0.dp).size(2.dp, 116.dp).background(Red))
         Box(Modifier.offset(0.dp, 114.dp).size(1000.dp, 2.dp).background(Red.copy(alpha = .58f)))
         Box(Modifier.offset(42.dp, 35.dp).size(78.dp, 46.dp))
-        Text(
-            text = t.driverName.uppercase(Locale.getDefault()),
-            color = TextMain,
-            fontFamily = DisplayFont,
-            fontSize = 32.sp,
-            fontWeight = FontWeight.Black,
-            fontStyle = FontStyle.Italic,
-            modifier = Modifier.offset(150.dp, 29.dp).width(420.dp),
-        )
-        Text(
-            text = t.teamName.uppercase(Locale.getDefault()),
-            color = Color(0xFFA4ADB7),
-            fontFamily = UiFont,
-            fontSize = 25.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.offset(150.dp, 67.dp).width(420.dp),
-        )
-        repeat(3) { i ->
-            Box(
-                Modifier
-                    .offset((835 + i * 41).dp, 0.dp)
-                    .size(27.dp, 112.dp)
-                    .background(Color(0xFF101923).copy(alpha = .52f))
-            )
-        }
-        Box(
-            Modifier
-                .offset(1010.dp, 0.dp)
-                .size(590.dp, 116.dp)
-                .background(Brush.horizontalGradient(listOf(Color(0xF2040A0F), Color(0xFF060C12))))
-        )
-        Text(
-            sessionLabel(t.sessionType),
-            color = Color(0xFFBCC4CB),
-            fontFamily = UiFont,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.offset(1104.dp, 33.dp).width(140.dp),
-        )
-        Text(
-            if (t.trackName != "TRACK") t.trackName.uppercase(Locale.getDefault()) else "F1 25",
-            color = Color(0xFFBCC4CB),
-            fontFamily = UiFont,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.offset(1104.dp, 59.dp).width(180.dp),
-        )
+        Text(t.driverName.uppercase(Locale.getDefault()), color = TextMain, fontFamily = DisplayFont, fontSize = 32.sp, fontWeight = FontWeight.Black, fontStyle = FontStyle.Italic, modifier = Modifier.offset(150.dp, 29.dp).width(420.dp))
+        Text(t.teamName.uppercase(Locale.getDefault()), color = Color(0xFFA4ADB7), fontFamily = UiFont, fontSize = 25.sp, fontWeight = FontWeight.Bold, modifier = Modifier.offset(150.dp, 67.dp).width(420.dp))
+        repeat(3) { i -> Box(Modifier.offset((835 + i * 41).dp, 0.dp).size(27.dp, 112.dp).background(Color(0xFF101923).copy(alpha = .52f))) }
+        Box(Modifier.offset(1010.dp, 0.dp).size(590.dp, 116.dp).background(Brush.horizontalGradient(listOf(Color(0xF2040A0F), Color(0xFF060C12)))))
+        Text(sessionLabel(t.sessionType), color = Color(0xFFBCC4CB), fontFamily = UiFont, fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.offset(1104.dp, 33.dp).width(140.dp))
+        Text(if (t.trackName != "TRACK") t.trackName.uppercase(Locale.getDefault()) else "F1 25", color = Color(0xFFBCC4CB), fontFamily = UiFont, fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.offset(1104.dp, 59.dp).width(180.dp))
         Box(Modifier.offset(1284.dp, 23.dp).size(1.dp, 69.dp).background(Color(0xFF28343E)))
         Text(t.weatherSymbol, color = Yellow, fontSize = 38.sp, modifier = Modifier.offset(1327.dp, 34.dp).size(50.dp, 50.dp), textAlign = TextAlign.Center)
         Text("${t.airTemperatureC}°C", color = TextMain, fontFamily = DisplayFont, fontSize = 32.sp, fontWeight = FontWeight.Bold, modifier = Modifier.offset(1400.dp, 31.dp).width(130.dp))
@@ -204,9 +167,7 @@ private fun BoxScope.RevLights(t: TelemetryState) {
         }
     }
     Row(Modifier.offset(31.dp, 79.dp).size(620.dp, 24.dp), verticalAlignment = Alignment.CenterVertically) {
-        repeat(15) { i ->
-            Text("${i + 1}", color = Color(0xFFD0D6DB), fontFamily = DisplayFont, fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.width(41.33.dp))
-        }
+        repeat(15) { i -> Text("${i + 1}", color = Color(0xFFD0D6DB), fontFamily = DisplayFont, fontSize = 17.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.width(41.33.dp)) }
     }
 }
 
@@ -293,19 +254,7 @@ private fun BoxScope.TyreReadout(label: String, temp: Int, wear: Float, compound
 
 @Composable
 private fun CarOutline(modifier: Modifier) {
-    Canvas(modifier) {
-        val c = Color(0xFFCBD3DA)
-        val w = size.width
-        val h = size.height
-        val cx = w / 2f
-        drawLine(c, androidx.compose.ui.geometry.Offset(cx, h * .02f), androidx.compose.ui.geometry.Offset(cx, h * .98f), strokeWidth = 2f)
-        drawRoundRect(c.copy(alpha = .22f), topLeft = androidx.compose.ui.geometry.Offset(w * .34f, h * .06f), size = androidx.compose.ui.geometry.Size(w * .32f, h * .88f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(16f, 16f), style = Stroke(width = 2f))
-        val wheelW = w * .18f
-        val wheelH = h * .16f
-        listOf(.09f to .20f, .73f to .20f, .09f to .68f, .73f to .68f).forEach { (x, y) ->
-            drawRoundRect(c, topLeft = androidx.compose.ui.geometry.Offset(w * x, h * y), size = androidx.compose.ui.geometry.Size(wheelW, wheelH), cornerRadius = androidx.compose.ui.geometry.CornerRadius(5f, 5f), style = Stroke(width = 2f))
-        }
-    }
+    Image(painter = painterResource(R.drawable.telemetrico_f1_outline), contentDescription = null, contentScale = ContentScale.Fit, modifier = modifier)
 }
 
 @Composable
