@@ -3,7 +3,7 @@ name: Build Telemétrico APK
 on:
   workflow_dispatch:
   push:
-    branches: [ main, v0.4-development, v0.4.2-visual-fidelity ]
+    branches: [ main, v0.4-development, v0.4.2-visual-fidelity, v0.4.3-dashboard-rebuild ]
 
 jobs:
   build:
