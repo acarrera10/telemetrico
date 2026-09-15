@@ -57,6 +57,8 @@ private val Cyan = Color(0xFF00E3E8)
 private val Green = Color(0xFF00EB76)
 private val Yellow = Color(0xFFFFD21A)
 private val Red = Color(0xFFFF3039)
+private val Orange = Color(0xFFFF8A18)
+private val Blue = Color(0xFF4D8DFF)
 
 private val DisplayFont = FontFamily(
     Font(R.font.nimbus_sans_narrow_regular, FontWeight.Normal),
@@ -70,8 +72,41 @@ private val UiFont = FontFamily(
     Font(R.font.nimbus_sans_bold, FontWeight.Black),
 )
 
+private enum class RaceUiState {
+    NORMAL,
+    YELLOW_FLAG,
+    SAFETY_CAR,
+    VSC,
+    PIT_LIMITER,
+    PENALTY,
+    BLUE_FLAG,
+    INVALID_LAP,
+}
+
+private data class RaceVisualState(
+    val state: RaceUiState,
+    val label: String = "",
+    val detail: String = "",
+    val accent: Color = Red,
+    val strong: Boolean = false,
+)
+
+private fun raceVisualState(t: TelemetryState): RaceVisualState = when {
+    t.unservedStopGo > 0 -> RaceVisualState(RaceUiState.PENALTY, "STOP & GO", "PENALTY", Red, true)
+    t.unservedDriveThrough > 0 -> RaceVisualState(RaceUiState.PENALTY, "DRIVE THROUGH", "PENALTY", Red, true)
+    t.pitLimiterActive -> RaceVisualState(RaceUiState.PIT_LIMITER, "PIT LIMITER", "ACTIVE", Orange, true)
+    t.safetyCarStatus == 2 -> RaceVisualState(RaceUiState.VSC, "VIRTUAL SAFETY CAR", "VSC", Yellow, true)
+    t.safetyCarStatus == 1 -> RaceVisualState(RaceUiState.SAFETY_CAR, "SAFETY CAR", "SC", Yellow, true)
+    t.fiaFlag == 3 -> RaceVisualState(RaceUiState.YELLOW_FLAG, "YELLOW FLAG", "CAUTION", Yellow, true)
+    t.fiaFlag == 2 -> RaceVisualState(RaceUiState.BLUE_FLAG, "BLUE FLAG", "LET CAR PASS", Blue)
+    t.currentLapInvalid -> RaceVisualState(RaceUiState.INVALID_LAP, "INVALID LAP", "LAP TIME", Red)
+    t.penaltiesSeconds > 0 -> RaceVisualState(RaceUiState.PENALTY, "PENALTY +${t.penaltiesSeconds}s", "TIME PENALTY", Red, true)
+    else -> RaceVisualState(RaceUiState.NORMAL)
+}
+
 @Composable
 fun DashboardScreen(telemetry: TelemetryState, connection: ConnectionState) {
+    val raceState = raceVisualState(telemetry)
     BoxWithConstraints(
         Modifier.fillMaxSize().background(CanvasBg),
         contentAlignment = Alignment.Center,
@@ -89,28 +124,44 @@ fun DashboardScreen(telemetry: TelemetryState, connection: ConnectionState) {
                     .background(Brush.radialGradient(colors = listOf(Color(0x2B08212D), Color.Transparent), radius = 720f))
                     .background(CanvasBg)
             ) {
-                Header(telemetry)
-                PositionPanel(telemetry)
-                DrivePanel(telemetry)
+                Header(telemetry, raceState)
+                PositionPanel(telemetry, raceState)
+                DrivePanel(telemetry, raceState)
                 FuelPanel(telemetry)
                 ErsPanel(telemetry)
                 TyresPanel(telemetry)
-                BottomTiming(telemetry)
+                BottomTiming(telemetry, raceState)
+                StateChrome(raceState)
             }
         }
     }
 }
 
 @Composable
-private fun BoxScope.Header(t: TelemetryState) {
-    Panel(Modifier.offset(0.dp, 0.dp).size(1600.dp, 116.dp), radius = 17f) {
+private fun BoxScope.StateChrome(state: RaceVisualState) {
+    if (state.state == RaceUiState.NORMAL) return
+    val alpha = if (state.strong) .72f else .44f
+    Box(Modifier.offset(0.dp, 116.dp).size(1600.dp, 2.dp).background(state.accent.copy(alpha = alpha)))
+    Box(Modifier.offset(0.dp, 753.dp).size(1600.dp, 2.dp).background(state.accent.copy(alpha = alpha * .72f)))
+}
+
+@Composable
+private fun BoxScope.Header(t: TelemetryState, state: RaceVisualState) {
+    val accent = if (state.state == RaceUiState.NORMAL) Red else state.accent
+    Panel(Modifier.offset(0.dp, 0.dp).size(1600.dp, 116.dp), radius = 17f, borderColor = accent.copy(alpha = if (state.state == RaceUiState.NORMAL) .34f else .68f)) {
         Box(Modifier.offset(0.dp, 0.dp).size(1050.dp, 116.dp).background(Brush.horizontalGradient(listOf(Color(0xFF071019), Color(0xFF050B11), Color(0xFF080F17)))))
-        Box(Modifier.offset(0.dp, 0.dp).size(2.dp, 116.dp).background(Red))
-        Box(Modifier.offset(0.dp, 114.dp).size(1000.dp, 2.dp).background(Red.copy(alpha = .58f)))
+        Box(Modifier.offset(0.dp, 0.dp).size(2.dp, 116.dp).background(accent))
+        Box(Modifier.offset(0.dp, 114.dp).size(1000.dp, 2.dp).background(accent.copy(alpha = .58f)))
         Box(Modifier.offset(42.dp, 35.dp).size(78.dp, 46.dp))
         Text(t.driverName.uppercase(Locale.getDefault()), color = TextMain, fontFamily = DisplayFont, fontSize = 32.sp, fontWeight = FontWeight.Black, fontStyle = FontStyle.Italic, modifier = Modifier.offset(150.dp, 29.dp).width(420.dp))
         Text(t.teamName.uppercase(Locale.getDefault()), color = Color(0xFFA4ADB7), fontFamily = UiFont, fontSize = 25.sp, fontWeight = FontWeight.Bold, modifier = Modifier.offset(150.dp, 67.dp).width(420.dp))
-        repeat(3) { i -> Box(Modifier.offset((835 + i * 41).dp, 0.dp).size(27.dp, 112.dp).background(Color(0xFF101923).copy(alpha = .52f))) }
+
+        if (state.state != RaceUiState.NORMAL) {
+            StatusBadge(state)
+        } else {
+            repeat(3) { i -> Box(Modifier.offset((835 + i * 41).dp, 0.dp).size(27.dp, 112.dp).background(Color(0xFF101923).copy(alpha = .52f))) }
+        }
+
         Box(Modifier.offset(1010.dp, 0.dp).size(590.dp, 116.dp).background(Brush.horizontalGradient(listOf(Color(0xF2040A0F), Color(0xFF060C12)))))
         Text(sessionLabel(t.sessionType), color = Color(0xFFBCC4CB), fontFamily = UiFont, fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.offset(1104.dp, 33.dp).width(140.dp))
         Text(if (t.trackName != "TRACK") t.trackName.uppercase(Locale.getDefault()) else "F1 25", color = Color(0xFFBCC4CB), fontFamily = UiFont, fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.offset(1104.dp, 59.dp).width(180.dp))
@@ -122,12 +173,34 @@ private fun BoxScope.Header(t: TelemetryState) {
 }
 
 @Composable
-private fun BoxScope.PositionPanel(t: TelemetryState) {
-    Panel(Modifier.offset(0.dp, 126.dp).size(344.dp, 627.dp), radius = 17f) {
+private fun BoxScope.StatusBadge(state: RaceVisualState) {
+    val width = when (state.state) {
+        RaceUiState.VSC -> 380
+        RaceUiState.PENALTY -> 350
+        else -> 310
+    }
+    val x = 610 + (380 - width) / 2
+    Box(
+        Modifier
+            .offset(x.dp, 27.dp)
+            .size(width.dp, 63.dp)
+            .background(state.accent.copy(alpha = .10f), RoundedCornerShape(8.dp))
+            .border(if (state.strong) 2.dp else 1.dp, state.accent.copy(alpha = .92f), RoundedCornerShape(8.dp))
+    ) {
+        Box(Modifier.offset(0.dp, 0.dp).size(7.dp, 63.dp).background(state.accent, RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp)))
+        Text(state.label, color = state.accent, fontFamily = DisplayFont, fontSize = if (state.label.length > 16) 27.sp else 32.sp, fontWeight = FontWeight.Black, fontStyle = FontStyle.Italic, modifier = Modifier.offset(25.dp, 8.dp).width((width - 40).dp))
+        Text(state.detail, color = TextSoft, fontFamily = UiFont, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.offset(26.dp, 42.dp).width((width - 40).dp))
+    }
+}
+
+@Composable
+private fun BoxScope.PositionPanel(t: TelemetryState, state: RaceVisualState) {
+    val accent = if (state.state == RaceUiState.NORMAL) Red else state.accent
+    Panel(Modifier.offset(0.dp, 126.dp).size(344.dp, 627.dp), radius = 17f, borderColor = if (state.strong) accent.copy(alpha = .45f) else PanelLine) {
         Label("POSITION", 47, 29)
         Text(if (t.position > 0) "P${t.position}" else "—", color = TextMain, fontFamily = DisplayFont, fontSize = 126.sp, fontWeight = FontWeight.Black, fontStyle = FontStyle.Italic, modifier = Modifier.offset(43.dp, 67.dp).width(260.dp))
         Box(Modifier.offset(47.dp, 210.dp).size(267.dp, 1.dp).background(Divider))
-        Box(Modifier.offset(47.dp, 209.dp).size(55.dp, 3.dp).background(Red))
+        Box(Modifier.offset(47.dp, 209.dp).size(55.dp, 3.dp).background(accent))
         Label("LAP", 47, 244)
         Text(if (t.currentLap > 0 && t.totalLaps > 0) "${t.currentLap} / ${t.totalLaps}" else "—", color = TextMain, fontFamily = DisplayFont, fontSize = 57.sp, fontWeight = FontWeight.Bold, modifier = Modifier.offset(47.dp, 276.dp).width(260.dp))
         Box(Modifier.offset(47.dp, 361.dp).size(267.dp, 1.dp).background(Divider))
@@ -140,8 +213,9 @@ private fun BoxScope.PositionPanel(t: TelemetryState) {
 }
 
 @Composable
-private fun BoxScope.DrivePanel(t: TelemetryState) {
-    Panel(Modifier.offset(356.dp, 126.dp).size(680.dp, 627.dp), radius = 17f) {
+private fun BoxScope.DrivePanel(t: TelemetryState, state: RaceVisualState) {
+    val border = if (state.strong) state.accent.copy(alpha = .42f) else PanelLine
+    Panel(Modifier.offset(356.dp, 126.dp).size(680.dp, 627.dp), radius = 17f, borderColor = border) {
         Label("RPM ×1000", 30, 13)
         RevLights(t)
         Pedal("BRAKE", t.brake, Red, x = 30)
@@ -258,7 +332,7 @@ private fun CarOutline(modifier: Modifier) {
 }
 
 @Composable
-private fun BoxScope.BottomTiming(t: TelemetryState) {
+private fun BoxScope.BottomTiming(t: TelemetryState, state: RaceVisualState) {
     Panel(Modifier.offset(0.dp, 766.dp).size(1013.dp, 134.dp), radius = 17f) {
         TimingCell("CURRENT LAP", formatLapTime(t.currentLapTimeMs), 0, 225, current = true)
         TimingCell("LAST LAP", formatLapTime(t.lastLapTimeMs), 225, 178)
@@ -271,9 +345,14 @@ private fun BoxScope.BottomTiming(t: TelemetryState) {
         Label("SPEED TRAP", 37, 28)
         Text(if (t.speedTrapFastestKph > 0f) "${t.speedTrapFastestKph.roundToInt()} KM/H" else "—", color = TextMain, fontFamily = DisplayFont, fontSize = 37.sp, fontWeight = FontWeight.Bold, modifier = Modifier.offset(37.dp, 72.dp).width(220.dp))
     }
-    Panel(Modifier.offset(1319.dp, 766.dp).size(281.dp, 134.dp), radius = 17f) {
+    val penaltyAccent = when {
+        state.state == RaceUiState.PENALTY -> state.accent
+        t.penaltiesSeconds > 0 -> Red
+        else -> PanelLine
+    }
+    Panel(Modifier.offset(1319.dp, 766.dp).size(281.dp, 134.dp), radius = 17f, borderColor = penaltyAccent, borderWidth = if (state.state == RaceUiState.PENALTY) 2f else 1f) {
         Label("PENALTIES", 23, 20)
-        Text("+${t.penaltiesSeconds}s", color = if (t.penaltiesSeconds > 0) Yellow else TextMain, fontFamily = DisplayFont, fontSize = 27.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.offset(180.dp, 17.dp).width(75.dp))
+        Text("+${t.penaltiesSeconds}s", color = if (t.penaltiesSeconds > 0) Red else TextMain, fontFamily = DisplayFont, fontSize = 27.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.End, modifier = Modifier.offset(180.dp, 17.dp).width(75.dp))
         SmallPenalty("WARNINGS", t.totalWarnings.toString(), 56)
         SmallPenalty("CORNER CUTTING", t.cornerCuttingWarnings.toString(), 89)
     }
@@ -314,7 +393,14 @@ private fun BoxScope.Label(text: String, x: Int, y: Int) {
 }
 
 @Composable
-private fun Panel(modifier: Modifier, radius: Float, borderColor: Color = PanelLine, borderWidth: Float = 1f, background: Brush = Brush.linearGradient(listOf(PanelTop.copy(alpha = .96f), PanelBottom.copy(alpha = .985f))), content: @Composable BoxScope.() -> Unit) {
+private fun Panel(
+    modifier: Modifier,
+    radius: Float,
+    borderColor: Color = PanelLine,
+    borderWidth: Float = 1f,
+    background: Brush = Brush.linearGradient(listOf(PanelTop.copy(alpha = .96f), PanelBottom.copy(alpha = .985f))),
+    content: @Composable BoxScope.() -> Unit,
+) {
     Box(modifier.clip(RoundedCornerShape(radius.dp)).background(background).border(borderWidth.dp, borderColor, RoundedCornerShape(radius.dp)), content = content)
 }
 
@@ -323,4 +409,4 @@ private fun formatGap(ms: Long) = if (ms <= 0) "—" else String.format(Locale.U
 private fun formatLapTime(ms: Long): String { if (ms <= 0) return "—"; val m = ms / 60000; val s = (ms % 60000) / 1000; val mm = ms % 1000; return String.format(Locale.US, "%d:%02d.%03d", m, s, mm) }
 private fun formatSectorTime(ms: Long) = if (ms <= 0) "—" else String.format(Locale.US, "%.3f", ms / 1000f)
 private fun sessionLabel(type: Int) = when (type) { 10 -> "RACE"; 11 -> "RACE 2"; 12 -> "RACE 3"; 5 -> "Q1"; 6 -> "Q2"; 7 -> "Q3"; else -> "SESSION" }
-private fun compoundColor(v: Int) = when (v) { 16 -> Red; 17 -> Yellow; 18 -> TextMain; 7 -> Green; 8 -> Color(0xFF4D8DFF); else -> TextMuted }
+private fun compoundColor(v: Int) = when (v) { 16 -> Red; 17 -> Yellow; 18 -> TextMain; 7 -> Green; 8 -> Blue; else -> TextMuted }
