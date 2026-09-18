@@ -111,7 +111,7 @@ fun DashboardScreen(telemetry: TelemetryState, connection: ConnectionState) {
         Modifier.fillMaxSize().background(CanvasBg),
         contentAlignment = Alignment.Center,
     ) {
-        val scale = min(maxWidth.value / BASE_WIDTH, maxHeight.value / BASE_HEIGHT).coerceAtLeast(0.01f)
+        val scale = min((maxWidth.value - OUTER_MARGIN * 2f) / BASE_WIDTH, (maxHeight.value - OUTER_MARGIN * 2f) / BASE_HEIGHT).coerceAtLeast(0.01f)
         Box(Modifier.size((BASE_WIDTH * scale).dp, (BASE_HEIGHT * scale).dp)) {
             Box(
                 Modifier
@@ -140,56 +140,160 @@ fun DashboardScreen(telemetry: TelemetryState, connection: ConnectionState) {
 @Composable
 private fun BoxScope.StateChrome(state: RaceVisualState) {
     if (state.state == RaceUiState.NORMAL) return
-    val alpha = if (state.strong) .72f else .44f
-    Box(Modifier.offset(0.dp, 116.dp).size(1600.dp, 2.dp).background(state.accent.copy(alpha = alpha)))
-    Box(Modifier.offset(0.dp, 753.dp).size(1600.dp, 2.dp).background(state.accent.copy(alpha = alpha * .72f)))
+    val alpha = if (state.strong) .92f else .70f
+    Box(
+        Modifier.offset(2.dp, 2.dp).size(1596.dp, 896.dp)
+            .border(9.dp, state.accent.copy(alpha = .08f), RoundedCornerShape(20.dp))
+    )
+    Box(
+        Modifier.offset(5.dp, 5.dp).size(1590.dp, 890.dp)
+            .border(5.dp, state.accent.copy(alpha = .18f), RoundedCornerShape(18.dp))
+    )
+    Box(
+        Modifier.offset(8.dp, 8.dp).size(1584.dp, 884.dp)
+            .border(2.dp, state.accent.copy(alpha = alpha), RoundedCornerShape(16.dp))
+    )
 }
 
 @Composable
 private fun BoxScope.Header(t: TelemetryState, state: RaceVisualState) {
     val accent = if (state.state == RaceUiState.NORMAL) Red else state.accent
-    Panel(Modifier.offset(0.dp, 0.dp).size(1600.dp, 116.dp), radius = 17f, borderColor = accent.copy(alpha = if (state.state == RaceUiState.NORMAL) .34f else .68f)) {
-        Box(Modifier.offset(0.dp, 0.dp).size(1050.dp, 116.dp).background(Brush.horizontalGradient(listOf(Color(0xFF071019), Color(0xFF050B11), Color(0xFF080F17)))))
+    Panel(
+        Modifier.offset(0.dp, 0.dp).size(1600.dp, 116.dp),
+        radius = 17f,
+        borderColor = accent.copy(alpha = if (state.state == RaceUiState.NORMAL) .42f else .78f),
+    ) {
+        Box(
+            Modifier.fillMaxSize().background(
+                Brush.horizontalGradient(
+                    listOf(Color(0xFF071019), Color(0xFF050B11), Color(0xFF071019), Color(0xFF040A0F))
+                )
+            )
+        )
         Box(Modifier.offset(0.dp, 0.dp).size(2.dp, 116.dp).background(accent))
-        Box(Modifier.offset(0.dp, 114.dp).size(1000.dp, 2.dp).background(accent.copy(alpha = .58f)))
-        Box(Modifier.offset(42.dp, 35.dp).size(78.dp, 46.dp))
-        Text(t.driverName.uppercase(Locale.getDefault()), color = TextMain, fontFamily = DisplayFont, fontSize = 32.sp, fontWeight = FontWeight.Black, fontStyle = FontStyle.Italic, modifier = Modifier.offset(150.dp, 29.dp).width(420.dp))
-        Text(t.teamName.uppercase(Locale.getDefault()), color = Color(0xFFA4ADB7), fontFamily = UiFont, fontSize = 25.sp, fontWeight = FontWeight.Bold, modifier = Modifier.offset(150.dp, 67.dp).width(420.dp))
+        Box(Modifier.offset(0.dp, 114.dp).size(1600.dp, 2.dp).background(accent.copy(alpha = .58f)))
+
+        teamLogoRes(t.teamName)?.let { logo ->
+            Image(
+                painter = painterResource(logo),
+                contentDescription = "${t.teamName} logo",
+                contentScale = ContentScale.Fit,
+                modifier = Modifier.offset(39.dp, 32.dp).size(82.dp, 52.dp),
+            )
+        }
+        Text(
+            t.driverName.uppercase(Locale.getDefault()),
+            color = TextMain,
+            fontFamily = DisplayFont,
+            fontSize = 32.sp,
+            fontWeight = FontWeight.Black,
+            fontStyle = FontStyle.Italic,
+            modifier = Modifier.offset(150.dp, 29.dp).width(420.dp),
+        )
+        Text(
+            t.teamName.uppercase(Locale.getDefault()),
+            color = Color(0xFFA4ADB7),
+            fontFamily = UiFont,
+            fontSize = 25.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.offset(150.dp, 67.dp).width(420.dp),
+        )
 
         if (state.state != RaceUiState.NORMAL) {
             StatusBadge(state)
         } else {
-            repeat(3) { i -> Box(Modifier.offset((835 + i * 41).dp, 0.dp).size(27.dp, 112.dp).background(Color(0xFF101923).copy(alpha = .52f))) }
+            repeat(3) { i ->
+                Box(
+                    Modifier.offset((835 + i * 41).dp, 0.dp).size(27.dp, 112.dp)
+                        .background(Color(0xFF101923).copy(alpha = .52f))
+                )
+            }
         }
 
-        Box(Modifier.offset(1010.dp, 0.dp).size(590.dp, 116.dp).background(Brush.horizontalGradient(listOf(Color(0xF2040A0F), Color(0xFF060C12)))))
-        Text(sessionLabel(t.sessionType), color = Color(0xFFBCC4CB), fontFamily = UiFont, fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.offset(1104.dp, 33.dp).width(140.dp))
-        Text(if (t.trackName != "TRACK") t.trackName.uppercase(Locale.getDefault()) else "F1 25", color = Color(0xFFBCC4CB), fontFamily = UiFont, fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.offset(1104.dp, 59.dp).width(180.dp))
-        Box(Modifier.offset(1284.dp, 23.dp).size(1.dp, 69.dp).background(Color(0xFF28343E)))
-        Text(t.weatherSymbol, color = Yellow, fontSize = 38.sp, modifier = Modifier.offset(1327.dp, 34.dp).size(50.dp, 50.dp), textAlign = TextAlign.Center)
-        Text("${t.airTemperatureC}°C", color = TextMain, fontFamily = DisplayFont, fontSize = 32.sp, fontWeight = FontWeight.Bold, modifier = Modifier.offset(1400.dp, 31.dp).width(130.dp))
-        Text("TRACK ${t.trackTemperatureC}°C", color = Color(0xFFAAB3BC), fontFamily = UiFont, fontSize = 19.sp, fontWeight = FontWeight.Bold, modifier = Modifier.offset(1400.dp, 69.dp).width(170.dp))
+        Box(Modifier.offset(1010.dp, 0.dp).size(1.dp, 116.dp).background(Color(0xFF202C35)))
+        Text(
+            sessionLabel(t.sessionType),
+            color = Color(0xFFBCC4CB),
+            fontFamily = UiFont,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.offset(1050.dp, 30.dp).width(150.dp),
+        )
+        Text(
+            if (t.trackName != "TRACK") t.trackName.uppercase(Locale.getDefault()) else "F1 25",
+            color = TextMain,
+            fontFamily = DisplayFont,
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.offset(1050.dp, 58.dp).width(235.dp),
+        )
+
+        // Reserved visual slot for a future circuit trace.
+        Box(
+            Modifier.offset(1305.dp, 20.dp).size(260.dp, 76.dp)
+                .border(1.dp, Color(0xFF263541), RoundedCornerShape(10.dp))
+                .background(Color(0x1200E3E8), RoundedCornerShape(10.dp))
+        )
+        repeat(3) { i ->
+            Box(
+                Modifier.offset((1368 + i * 34).dp, 31.dp).size(18.dp, 54.dp)
+                    .background(Color(0xFF15232D).copy(alpha = .65f), RoundedCornerShape(9.dp))
+            )
+        }
     }
 }
 
 @Composable
 private fun BoxScope.StatusBadge(state: RaceVisualState) {
     val width = when (state.state) {
-        RaceUiState.VSC -> 380
-        RaceUiState.PENALTY -> 350
-        else -> 310
+        RaceUiState.VSC -> 390
+        RaceUiState.PENALTY -> 360
+        else -> 320
     }
-    val x = 610 + (380 - width) / 2
+    val x = 610 + (390 - width) / 2
     Box(
-        Modifier
-            .offset(x.dp, 27.dp)
-            .size(width.dp, 63.dp)
-            .background(state.accent.copy(alpha = .10f), RoundedCornerShape(8.dp))
-            .border(if (state.strong) 2.dp else 1.dp, state.accent.copy(alpha = .92f), RoundedCornerShape(8.dp))
+        Modifier.offset((x - 8).dp, 19.dp).size((width + 16).dp, 79.dp)
+            .border(8.dp, state.accent.copy(alpha = .08f), RoundedCornerShape(13.dp))
+    )
+    Box(
+        Modifier.offset((x - 4).dp, 23.dp).size((width + 8).dp, 71.dp)
+            .border(4.dp, state.accent.copy(alpha = .18f), RoundedCornerShape(11.dp))
+    )
+    Box(
+        Modifier.offset(x.dp, 27.dp).size(width.dp, 63.dp)
+            .background(
+                Brush.horizontalGradient(
+                    listOf(Color(0xFF071018), state.accent.copy(alpha = .12f), Color(0xFF071018))
+                ),
+                RoundedCornerShape(8.dp),
+            )
+            .border(if (state.strong) 2.dp else 1.dp, state.accent, RoundedCornerShape(8.dp))
     ) {
-        Box(Modifier.offset(0.dp, 0.dp).size(7.dp, 63.dp).background(state.accent, RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp)))
-        Text(state.label, color = state.accent, fontFamily = DisplayFont, fontSize = if (state.label.length > 16) 27.sp else 32.sp, fontWeight = FontWeight.Black, fontStyle = FontStyle.Italic, modifier = Modifier.offset(25.dp, 8.dp).width((width - 40).dp))
-        Text(state.detail, color = TextSoft, fontFamily = UiFont, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.offset(26.dp, 42.dp).width((width - 40).dp))
+        Box(
+            Modifier.offset(0.dp, 0.dp).size(7.dp, 63.dp)
+                .background(state.accent, RoundedCornerShape(topStart = 8.dp, bottomStart = 8.dp))
+        )
+        Text(
+            state.label,
+            color = state.accent,
+            fontFamily = DisplayFont,
+            fontSize = if (state.label.length > 16) 27.sp else 32.sp,
+            fontWeight = FontWeight.Black,
+            fontStyle = FontStyle.Italic,
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.offset(25.dp, 8.dp).width((width - 40).dp),
+        )
+        Text(
+            state.detail,
+            color = TextSoft,
+            fontFamily = UiFont,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            softWrap = false,
+            modifier = Modifier.offset(26.dp, 42.dp).width((width - 40).dp),
+        )
     }
 }
 
@@ -247,7 +351,19 @@ private fun BoxScope.RevLights(t: TelemetryState) {
 
 @Composable
 private fun BoxScope.Pedal(label: String, value: Float, color: Color, x: Int) {
-    Text(label, color = Color(0xFFF2F3F4), fontFamily = UiFont, fontSize = 24.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.offset(x.dp, 151.dp).width(104.dp))
+    val labelX = if (label == "THROTTLE") x - 12 else x
+    val labelWidth = if (label == "THROTTLE") 128 else 104
+    Text(
+        label,
+        color = Color(0xFFF2F3F4),
+        fontFamily = UiFont,
+        fontSize = if (label == "THROTTLE") 21.sp else 24.sp,
+        fontWeight = FontWeight.Bold,
+        textAlign = TextAlign.Center,
+        maxLines = 1,
+        softWrap = false,
+        modifier = Modifier.offset(labelX.dp, 151.dp).width(labelWidth.dp),
+    )
     Box(Modifier.offset((x + 34).dp, 195.dp).size(45.dp, 284.dp).background(Color(0xFF091015), RoundedCornerShape(7.dp)).border(2.dp, if (label == "THROTTLE") Green.copy(alpha = .44f) else Color(0xFF293743), RoundedCornerShape(7.dp)).padding(4.dp)) {
         Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().fillMaxHeight(value.coerceIn(0f, 1f)).background(color, RoundedCornerShape(3.dp)))
     }
@@ -258,15 +374,69 @@ private fun BoxScope.Pedal(label: String, value: Float, color: Color, x: Int) {
 private fun BoxScope.DrsModule(t: TelemetryState) {
     val active = t.drsActive
     val available = t.drsAllowed && !active
-    val border = if (active || available) Cyan else PanelLine
-    Panel(Modifier.offset(126.dp, 546.dp).size(443.dp, 70.dp), radius = 7f, borderColor = border, borderWidth = if (active) 3f else 1f, background = if (active || available) Brush.horizontalGradient(listOf(Color(0xFF041014), Cyan.copy(alpha = .09f), Color(0xFF041014))) else Brush.horizontalGradient(listOf(Color(0xFF061018), Color(0xFF061018)))) {
-        Text("DRS", color = TextMain, fontFamily = DisplayFont, fontSize = 37.sp, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic, modifier = Modifier.offset(24.dp, 14.dp).width(110.dp))
-        Text(when { active -> "ACTIVE"; available -> "AVAILABLE"; t.drsActivationDistanceM > 0 -> "${t.drsActivationDistanceM} M"; else -> "—" }, color = if (active || available) Cyan else TextMuted, fontFamily = DisplayFont, fontSize = if (available) 28.sp else 37.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, modifier = Modifier.offset(125.dp, if (available) 18.dp else 14.dp).width(210.dp))
+    val illuminated = active || available
+    val border = if (illuminated) Cyan else PanelLine
+
+    if (illuminated) {
+        Box(
+            Modifier.offset(118.dp, 538.dp).size(459.dp, 86.dp)
+                .border(8.dp, Cyan.copy(alpha = .07f), RoundedCornerShape(13.dp))
+        )
+        Box(
+            Modifier.offset(122.dp, 542.dp).size(451.dp, 78.dp)
+                .border(4.dp, Cyan.copy(alpha = .16f), RoundedCornerShape(10.dp))
+        )
+    }
+
+    Panel(
+        Modifier.offset(126.dp, 546.dp).size(443.dp, 70.dp),
+        radius = 7f,
+        borderColor = border,
+        borderWidth = if (active) 3f else if (available) 2f else 1f,
+        background = if (illuminated) {
+            Brush.horizontalGradient(listOf(Color(0xFF041014), Cyan.copy(alpha = .10f), Color(0xFF041014)))
+        } else {
+            Brush.horizontalGradient(listOf(Color(0xFF061018), Color(0xFF061018)))
+        },
+    ) {
+        Box(Modifier.offset(24.dp, 0.dp).size(110.dp, 70.dp), contentAlignment = Alignment.CenterStart) {
+            Text(
+                "DRS",
+                color = TextMain,
+                fontFamily = DisplayFont,
+                fontSize = 37.sp,
+                fontWeight = FontWeight.Bold,
+                fontStyle = FontStyle.Italic,
+                maxLines = 1,
+            )
+        }
+        Box(Modifier.offset(125.dp, 0.dp).size(210.dp, 70.dp), contentAlignment = Alignment.Center) {
+            Text(
+                when {
+                    active -> "ACTIVE"
+                    available -> "AVAILABLE"
+                    t.drsActivationDistanceM > 0 -> "${t.drsActivationDistanceM} M"
+                    else -> "—"
+                },
+                color = if (illuminated) Cyan else TextMuted,
+                fontFamily = DisplayFont,
+                fontSize = if (available) 28.sp else 37.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                softWrap = false,
+            )
+        }
         Canvas(Modifier.offset(350.dp, 17.dp).size(76.dp, 38.dp)) {
-            val c = if (active || available) Cyan.copy(alpha = .67f) else TextMuted.copy(alpha = .25f)
+            val c = if (illuminated) Cyan.copy(alpha = .78f) else TextMuted.copy(alpha = .25f)
             var x = 0f
             repeat(4) {
-                drawLine(c, start = androidx.compose.ui.geometry.Offset(x + 8f, size.height), end = androidx.compose.ui.geometry.Offset(x + 28f, 0f), strokeWidth = 8f)
+                drawLine(
+                    c,
+                    start = androidx.compose.ui.geometry.Offset(x + 8f, size.height),
+                    end = androidx.compose.ui.geometry.Offset(x + 28f, 0f),
+                    strokeWidth = 8f,
+                )
                 x += 18f
             }
         }
@@ -277,6 +447,7 @@ private fun BoxScope.DrsModule(t: TelemetryState) {
 private fun BoxScope.FuelPanel(t: TelemetryState) {
     Panel(Modifier.offset(1047.dp, 126.dp).size(553.dp, 156.dp), radius = 17f) {
         Label("FUEL", 29, 29)
+        FuelPumpIcon(Modifier.offset(29.dp, 66.dp).size(44.dp, 48.dp))
         Text("${t.fuelPercent}%", color = TextMain, fontFamily = DisplayFont, fontSize = 53.sp, fontWeight = FontWeight.Bold, modifier = Modifier.offset(95.dp, 58.dp).width(140.dp))
         HorizontalBar(value = t.fuelPercent / 100f, color = Cyan, x = 95, y = 108, width = 266, height = 22)
         Box(Modifier.offset(389.dp, 59.dp).size(1.dp, 74.dp).background(Color(0xFF28343E)))
@@ -294,8 +465,18 @@ private fun BoxScope.ErsPanel(t: TelemetryState) {
         Text("${t.ersPercent}%", color = TextMain, fontFamily = DisplayFont, fontSize = 34.sp, fontWeight = FontWeight.Bold, modifier = Modifier.offset(301.dp, 66.dp).width(85.dp))
         val mode = t.ersModeLabel
         if (mode != "NONE") {
-            Box(Modifier.offset(402.dp, 63.dp).size(126.dp, 51.dp).border(3.dp, Yellow, RoundedCornerShape(7.dp)), contentAlignment = Alignment.Center) {
-                Text(mode, color = Yellow, fontFamily = UiFont, fontSize = if (mode.length > 8) 18.sp else 23.sp, fontWeight = FontWeight.Black, textAlign = TextAlign.Center)
+            Box(Modifier.offset(392.dp, 63.dp).size(136.dp, 51.dp).border(3.dp, Yellow, RoundedCornerShape(7.dp)), contentAlignment = Alignment.Center) {
+                Text(
+                    mode,
+                    color = Yellow,
+                    fontFamily = UiFont,
+                    fontSize = if (mode == "OVERTAKE") 18.sp else 23.sp,
+                    fontWeight = FontWeight.Black,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1,
+                    softWrap = false,
+                    modifier = Modifier.width(126.dp),
+                )
             }
         }
     }
@@ -328,7 +509,7 @@ private fun BoxScope.TyreReadout(label: String, temp: Int, wear: Float, compound
 
 @Composable
 private fun CarOutline(modifier: Modifier) {
-    Image(painter = painterResource(R.drawable.telemetrico_f1_outline), contentDescription = null, contentScale = ContentScale.Fit, modifier = modifier)
+    Image(painter = painterResource(R.drawable.telemetrico_f1_outline_raster), contentDescription = null, contentScale = ContentScale.Fit, modifier = modifier)
 }
 
 @Composable
@@ -381,6 +562,44 @@ private fun BoxScope.SmallPenalty(label: String, value: String, y: Int) {
 }
 
 @Composable
+private fun FuelPumpIcon(modifier: Modifier) {
+    Canvas(modifier) {
+        val c = TextMain
+        drawRoundRect(
+            color = c,
+            topLeft = androidx.compose.ui.geometry.Offset(size.width * .10f, size.height * .08f),
+            size = androidx.compose.ui.geometry.Size(size.width * .56f, size.height * .72f),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.width * .06f, size.width * .06f),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = size.width * .09f),
+        )
+        drawLine(
+            color = c,
+            start = androidx.compose.ui.geometry.Offset(size.width * .18f, size.height * .28f),
+            end = androidx.compose.ui.geometry.Offset(size.width * .58f, size.height * .28f),
+            strokeWidth = size.width * .08f,
+        )
+        drawLine(
+            color = c,
+            start = androidx.compose.ui.geometry.Offset(size.width * .66f, size.height * .20f),
+            end = androidx.compose.ui.geometry.Offset(size.width * .83f, size.height * .35f),
+            strokeWidth = size.width * .08f,
+        )
+        drawLine(
+            color = c,
+            start = androidx.compose.ui.geometry.Offset(size.width * .83f, size.height * .35f),
+            end = androidx.compose.ui.geometry.Offset(size.width * .83f, size.height * .67f),
+            strokeWidth = size.width * .08f,
+        )
+        drawLine(
+            color = c,
+            start = androidx.compose.ui.geometry.Offset(size.width * .83f, size.height * .67f),
+            end = androidx.compose.ui.geometry.Offset(size.width * .68f, size.height * .67f),
+            strokeWidth = size.width * .08f,
+        )
+    }
+}
+
+@Composable
 private fun BoxScope.HorizontalBar(value: Float, color: Color, x: Int, y: Int, width: Int, height: Int) {
     Box(Modifier.offset(x.dp, y.dp).size(width.dp, height.dp).background(Color(0xFF202C36), RoundedCornerShape(5.dp))) {
         Box(Modifier.fillMaxHeight().fillMaxWidth(value.coerceIn(0f, 1f)).background(color, RoundedCornerShape(5.dp)))
@@ -410,3 +629,21 @@ private fun formatLapTime(ms: Long): String { if (ms <= 0) return "—"; val m =
 private fun formatSectorTime(ms: Long) = if (ms <= 0) "—" else String.format(Locale.US, "%.3f", ms / 1000f)
 private fun sessionLabel(type: Int) = when (type) { 10 -> "RACE"; 11 -> "RACE 2"; 12 -> "RACE 3"; 5 -> "Q1"; 6 -> "Q2"; 7 -> "Q3"; else -> "SESSION" }
 private fun compoundColor(v: Int) = when (v) { 16 -> Red; 17 -> Yellow; 18 -> TextMain; 7 -> Green; 8 -> Blue; else -> TextMuted }
+
+private fun teamLogoRes(teamName: String): Int? {
+    val team = teamName.lowercase(Locale.getDefault())
+    return when {
+        "alpine" in team -> R.drawable.team_alpine
+        "aston" in team -> R.drawable.team_aston_martin
+        "audi" in team || "sauber" in team -> R.drawable.team_audi
+        "cadillac" in team -> R.drawable.team_cadillac
+        "ferrari" in team -> R.drawable.team_ferrari
+        "haas" in team -> R.drawable.team_haas
+        "mclaren" in team -> R.drawable.team_mclaren
+        "mercedes" in team -> R.drawable.team_mercedes
+        "racing bulls" in team || "rb" == team.trim() -> R.drawable.team_racing_bulls
+        "red bull" in team -> R.drawable.team_red_bull
+        "williams" in team -> R.drawable.team_williams
+        else -> null
+    }
+}
