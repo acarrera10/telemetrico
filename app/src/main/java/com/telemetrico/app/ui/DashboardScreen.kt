@@ -44,6 +44,7 @@ import kotlin.math.roundToInt
 
 private const val BASE_WIDTH = 1600f
 private const val BASE_HEIGHT = 900f
+private const val OUTER_MARGIN = 12f
 
 private val CanvasBg = Color(0xFF02070B)
 private val PanelTop = Color(0xFF0C1821)
