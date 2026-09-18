@@ -14,8 +14,8 @@ android {
         applicationId = "com.telemetrico.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 8
-        versionName = "0.4.3.1-test"
+        versionCode = 9
+        versionName = "0.4.3.2-test"
     }
 
     signingConfigs {
