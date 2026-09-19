@@ -1,0 +1,1 @@
+RPM behavior: the 1–15 numbers are fixed scale labels; the 15 LED circles above them are dynamic and follow F1 25 telemetry via `revLightsBits`, with `revLightsPercent` fallback when the bitfield is unavailable.

@@ -1,0 +1,3 @@
+Nimbus Sans / Nimbus Sans Narrow source package license reference from the supplied prototype bundle.
+
+The font files supplied with the Telemétrico visual prototype are from urw-base35-fonts and include the AGPL-3.0 license with Font Exception. The original LICENSE.txt from the supplied bundle should be retained alongside the binary font assets when those OTF files are added to the Android project.
