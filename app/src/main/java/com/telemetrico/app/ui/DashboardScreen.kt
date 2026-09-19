@@ -1,5 +1,10 @@
 package com.telemetrico.app.ui
 
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -141,19 +146,53 @@ fun DashboardScreen(telemetry: TelemetryState, connection: ConnectionState) {
 @Composable
 private fun BoxScope.StateChrome(state: RaceVisualState) {
     if (state.state == RaceUiState.NORMAL) return
-    val alpha = if (state.strong) .92f else .70f
-    Box(
-        Modifier.offset(2.dp, 2.dp).size(1596.dp, 896.dp)
-            .border(9.dp, state.accent.copy(alpha = .08f), RoundedCornerShape(20.dp))
-    )
-    Box(
-        Modifier.offset(5.dp, 5.dp).size(1590.dp, 890.dp)
-            .border(5.dp, state.accent.copy(alpha = .18f), RoundedCornerShape(18.dp))
-    )
-    Box(
-        Modifier.offset(8.dp, 8.dp).size(1584.dp, 884.dp)
-            .border(2.dp, state.accent.copy(alpha = alpha), RoundedCornerShape(16.dp))
-    )
+
+    val pulse = rememberInfiniteTransition(label = "race-state-pulse")
+    val pulseAlpha = pulse.animateFloat(
+        initialValue = 0.38f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 780),
+            repeatMode = RepeatMode.Reverse,
+        ),
+        label = "race-state-alpha",
+    ).value
+
+    Canvas(Modifier.fillMaxSize()) {
+        val corner = 18.dp.toPx()
+        val inset = 15.dp.toPx()
+        val left = inset
+        val top = inset
+        val right = size.width - inset
+        val bottom = size.height - inset
+        val rectSize = androidx.compose.ui.geometry.Size(right - left, bottom - top)
+        val topLeft = androidx.compose.ui.geometry.Offset(left, top)
+        val radius = androidx.compose.ui.geometry.CornerRadius(corner, corner)
+
+        // Wide soft glow behind the signal frame.
+        drawRoundRect(
+            color = state.accent.copy(alpha = 0.07f * pulseAlpha),
+            topLeft = topLeft,
+            size = rectSize,
+            cornerRadius = radius,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 42.dp.toPx()),
+        )
+        drawRoundRect(
+            color = state.accent.copy(alpha = 0.16f * pulseAlpha),
+            topLeft = topLeft,
+            size = rectSize,
+            cornerRadius = radius,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 30.dp.toPx()),
+        )
+        // Main high-visibility race-state frame.
+        drawRoundRect(
+            color = state.accent.copy(alpha = 0.95f * pulseAlpha),
+            topLeft = topLeft,
+            size = rectSize,
+            cornerRadius = radius,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 24.dp.toPx()),
+        )
+    }
 }
 
 @Composable
@@ -162,14 +201,25 @@ private fun BoxScope.Header(t: TelemetryState, state: RaceVisualState) {
     Panel(
         Modifier.offset(0.dp, 0.dp).size(1600.dp, 116.dp),
         radius = 17f,
-        borderColor = accent.copy(alpha = if (state.state == RaceUiState.NORMAL) .42f else .78f),
+        borderColor = accent.copy(alpha = if (state.state == RaceUiState.NORMAL) .62f else .92f),
+        borderWidth = if (state.state == RaceUiState.NORMAL) 2f else 3f,
     ) {
         Box(
             Modifier.fillMaxSize().background(
                 Brush.horizontalGradient(
-                    listOf(Color(0xFF071019), Color(0xFF050B11), Color(0xFF071019), Color(0xFF040A0F))
+                    listOf(
+                        Color(0xFF071019),
+                        Color(0xFF050B11),
+                        Color(0xFF071019),
+                        Color(0xFF050C12),
+                        Color(0xFF040A0F),
+                    )
                 )
             )
+        )
+        Box(
+            Modifier.offset(1010.dp, 0.dp).size(590.dp, 116.dp)
+                .background(Color(0x2200E3E8))
         )
         Box(Modifier.offset(0.dp, 0.dp).size(2.dp, 116.dp).background(accent))
         Box(Modifier.offset(0.dp, 114.dp).size(1600.dp, 2.dp).background(accent.copy(alpha = .58f)))
