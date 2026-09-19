@@ -510,7 +510,39 @@ private fun BoxScope.TyreReadout(label: String, temp: Int, wear: Float, compound
 
 @Composable
 private fun CarOutline(modifier: Modifier) {
-    Image(painter = painterResource(R.drawable.telemetrico_f1_outline_raster), contentDescription = null, contentScale = ContentScale.Fit, modifier = modifier)
+    // Crash-isolation build: keep the approved TYRES geometry but avoid
+    // decoding the raster car asset until we confirm it is safe on-device.
+    Canvas(modifier) {
+        val center = size.width / 2f
+        val body = Color(0xFFCBD3DA)
+        val secondary = Color(0xFF84909C)
+        drawRoundRect(
+            color = body,
+            topLeft = androidx.compose.ui.geometry.Offset(center - size.width * .12f, size.height * .08f),
+            size = androidx.compose.ui.geometry.Size(size.width * .24f, size.height * .78f),
+            cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.width * .08f, size.width * .08f),
+        )
+        drawRect(
+            color = secondary,
+            topLeft = androidx.compose.ui.geometry.Offset(center - size.width * .34f, size.height * .28f),
+            size = androidx.compose.ui.geometry.Size(size.width * .68f, size.height * .12f),
+        )
+        drawRect(
+            color = secondary,
+            topLeft = androidx.compose.ui.geometry.Offset(center - size.width * .28f, size.height * .64f),
+            size = androidx.compose.ui.geometry.Size(size.width * .56f, size.height * .12f),
+        )
+        drawRect(
+            color = body,
+            topLeft = androidx.compose.ui.geometry.Offset(center - size.width * .22f, size.height * .03f),
+            size = androidx.compose.ui.geometry.Size(size.width * .44f, size.height * .08f),
+        )
+        drawRect(
+            color = body,
+            topLeft = androidx.compose.ui.geometry.Offset(center - size.width * .18f, size.height * .86f),
+            size = androidx.compose.ui.geometry.Size(size.width * .36f, size.height * .08f),
+        )
+    }
 }
 
 @Composable
