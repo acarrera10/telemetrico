@@ -137,8 +137,12 @@ fun DashboardScreen(telemetry: TelemetryState, connection: ConnectionState) {
                 ErsPanel(telemetry)
                 TyresPanel(telemetry)
                 BottomTiming(telemetry, raceState)
-                StateChrome(raceState)
             }
+
+            // Draw race-state signalling in the final fitted coordinate space.
+            // This guarantees that the frame hugs the actual dashboard perimeter
+            // instead of being affected by the 1600×900 content transform.
+            StateChrome(raceState)
         }
     }
 }
@@ -158,39 +162,43 @@ private fun BoxScope.StateChrome(state: RaceVisualState) {
         label = "race-state-alpha",
     ).value
 
-    Canvas(Modifier.fillMaxSize()) {
+    Canvas(Modifier.matchParentSize()) {
+        // Keep the main stroke right against the fitted dashboard perimeter.
+        // Only half of each stroke sits inside the screen, so it never crosses
+        // through telemetry panels as the previous logical-canvas frame did.
+        val mainWidth = 18.dp.toPx()
+        val glowMidWidth = 28.dp.toPx()
+        val glowOuterWidth = 40.dp.toPx()
+        val inset = mainWidth / 2f + 2.dp.toPx()
         val corner = 18.dp.toPx()
-        val inset = 15.dp.toPx()
-        val left = inset
-        val top = inset
-        val right = size.width - inset
-        val bottom = size.height - inset
-        val rectSize = androidx.compose.ui.geometry.Size(right - left, bottom - top)
-        val topLeft = androidx.compose.ui.geometry.Offset(left, top)
+
+        val rectSize = androidx.compose.ui.geometry.Size(
+            width = size.width - inset * 2f,
+            height = size.height - inset * 2f,
+        )
+        val topLeft = androidx.compose.ui.geometry.Offset(inset, inset)
         val radius = androidx.compose.ui.geometry.CornerRadius(corner, corner)
 
-        // Wide soft glow behind the signal frame.
         drawRoundRect(
-            color = state.accent.copy(alpha = 0.07f * pulseAlpha),
+            color = state.accent.copy(alpha = 0.06f * pulseAlpha),
             topLeft = topLeft,
             size = rectSize,
             cornerRadius = radius,
-            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 42.dp.toPx()),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = glowOuterWidth),
         )
         drawRoundRect(
-            color = state.accent.copy(alpha = 0.16f * pulseAlpha),
+            color = state.accent.copy(alpha = 0.14f * pulseAlpha),
             topLeft = topLeft,
             size = rectSize,
             cornerRadius = radius,
-            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 30.dp.toPx()),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = glowMidWidth),
         )
-        // Main high-visibility race-state frame.
         drawRoundRect(
             color = state.accent.copy(alpha = 0.95f * pulseAlpha),
             topLeft = topLeft,
             size = rectSize,
             cornerRadius = radius,
-            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 24.dp.toPx()),
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = mainWidth),
         )
     }
 }
