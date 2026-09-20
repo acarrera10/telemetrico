@@ -2,7 +2,7 @@ name: Publish Telemétrico APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, v0.4.3-dashboard-rebuild ]
   workflow_dispatch:
 
 permissions:

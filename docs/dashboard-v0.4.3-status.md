@@ -1,0 +1,1 @@
+Status: first Compose reconstruction committed and compiling on CI. Exact Nimbus font binaries, exact monoplaza VectorDrawable, team logos, race-state variants, and tablet visual validation remain before merge/release.

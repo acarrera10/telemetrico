@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="198dp"
+    android:height="400dp"
+    android:viewportWidth="882"
+    android:viewportHeight="1784">
+
+    <!-- Lightweight diagnostic placeholder: preserves the approved asset box
+         while avoiding the very complex production path data. -->
+    <path
+        android:fillColor="#84909C"
+        android:pathData="M390,120 L492,120 L525,340 L565,640 L550,1320 L500,1625 L382,1625 L332,1320 L317,640 L357,340 Z" />
+
+    <path
+        android:fillColor="#CBD3DA"
+        android:pathData="M250,250 L632,250 L632,330 L250,330 Z M205,560 L335,560 L335,820 L205,820 Z M547,560 L677,560 L677,820 L547,820 Z M205,1260 L335,1260 L335,1520 L205,1520 Z M547,1260 L677,1260 L677,1520 L547,1520 Z M350,1580 L532,1580 L532,1665 L350,1665 Z" />
+</vector>
